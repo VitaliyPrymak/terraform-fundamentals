@@ -16,7 +16,7 @@ jobs:
     env:
       CLUSTER_NAME: main-ecs-cluster
       SERVICE_NAME: redis-service
-      AWS_REGION: us-east-1
+      AWS_DEFAULT_REGION: us-east-1
 
     steps:
       - name: Checkout code
