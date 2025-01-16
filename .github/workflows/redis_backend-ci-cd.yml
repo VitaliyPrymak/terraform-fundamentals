@@ -47,11 +47,15 @@ jobs:
             --query taskDefinition \
             --output json > redis-task-definition.json
 
+      - name: Clean task definition
+        run: |
+          jq 'del(.enableFaultInjection)' redis-task-definition.json > redis-task-definition-cleaned.json
+
       - name: Fill in new image ID in task definition
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          task-definition: redis-task-definition.json
+          task-definition: redis-task-definition-cleaned.json
           container-name: backend_redis
           image: ${{ steps.login-ecr.outputs.registry }}/backend-redis-dev:${{ github.sha }}
 
