@@ -36,11 +36,11 @@ jobs:
       - name: Build & Push Docker image
         run: |
           docker build -t ${{ steps.login-ecr.outputs.registry }}/backend-rds-dev:${{ github.sha }} \
-          ./tf-stuff/backend_rds \
-          -f ./tf-stuff/backend_rds/Dockerfile
+          ./backend_rds \
+          -f ./backend_rds/Dockerfile
           docker push ${{ steps.login-ecr.outputs.registry }}/backend-rds-dev:${{ github.sha }}
-      
-
+    
+          
       - name: Download task definition
         run: |
           aws ecs describe-task-definition \
