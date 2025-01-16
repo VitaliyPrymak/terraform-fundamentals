@@ -1,0 +1,68 @@
+name: CI/CD for RDS Backend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend_rds/**'
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy RDS Backend Docker Image
+    runs-on: ubuntu-latest
+
+    env:
+      CLUSTER_NAME: main-ecs-cluster
+      SERVICE_NAME: rds-service
+      AWS_DEFAULT_REGION: us-east-1
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_DEFAULT_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build & Push Docker image
+        run: |
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/backend-rds-dev:${{ github.sha }} \
+          ./tf-stuff/backend_rds \
+          -f ./tf-stuff/backend_rds/Dockerfile
+          docker push ${{ steps.login-ecr.outputs.registry }}/backend-rds-dev:${{ github.sha }}
+      
+
+      - name: Download task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition backend-rds-task \
+            --query taskDefinition \
+            --output json > rds-task-definition.json
+
+      - name: Fill in new image ID in task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: rds-task-definition.json
+          container-name: rds-service
+          image: ${{ steps.login-ecr.outputs.registry }}/backend-rds-dev:${{ github.sha }}
+
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.SERVICE_NAME }}
+          cluster: ${{ env.CLUSTER_NAME }}
+
+      - name: Force ECS Service Update
+        run: |
+          aws ecs update-service --cluster ${{ env.CLUSTER_NAME }} --service ${{ env.SERVICE_NAME }} --force-new-deployment --region ${{ env.AWS_DEFAULT_REGION }}
