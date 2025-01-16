@@ -1,0 +1,4 @@
+  {
+    "BACKEND_RDS_URL": "http://main-alb-120902197.us-east-1.elb.amazonaws.com:4000/test_connection/",
+    "BACKEND_REDIS_URL": "http://main-alb-120902197.us-east-1.elb.amazonaws.com:8000/test_connection/"
+  }
